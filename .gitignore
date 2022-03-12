@@ -1,0 +1,6 @@
+### Linux ###
+*~
+
+/bin/
+cmake-build-*/
+/build/

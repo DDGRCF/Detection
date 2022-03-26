@@ -1,6 +1,11 @@
 ### Linux ###
 *~
 
-/bin/
-cmake-build-*/
+/bin/images/
+/bin/logs/
+/bin/models/
+/bin/videos/
 /build/
+/bin/yolox-inst
+cmake-build-*/
+*.jpg

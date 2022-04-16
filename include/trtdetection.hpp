@@ -297,7 +297,8 @@ namespace DECT
       const int buffers_Nb = static_cast<int32_t> (engine->getNbBindings());
       CHECK_F(buffers_Nb == static_cast<int32_t> (1 + output_results.size()), "Input + Output dims");
       void * buffers[buffers_Nb];
-      std::unique_ptr<float> input(new float [input_node.getDataSize()]);
+      // std::unique_ptr<float> input(new float [input_node.getDataSize()]);
+      float * input = new float[input_node.getDataSize()];
       auto channels = input_image.channels();
       auto image_h = input_image.rows;
       auto image_w = input_image.cols;
@@ -315,7 +316,7 @@ namespace DECT
       //       }
       //    }
       // }
-      memcpy(input.get(), input_image.data, sizeof(float) * input_node.getDataSize());
+      memcpy(input, input_image.data, sizeof(float) * input_node.getDataSize());
       // Malloc Input Data
       CHECK_C(cudaMalloc(&buffers[input_node.index], input_node.getDataSize() * sizeof(float)));
       // Malloc Output Data 
@@ -327,7 +328,7 @@ namespace DECT
       cudaStream_t stream;
       CHECK_C(cudaStreamCreate(&stream));
       // Copy Input Memory
-      CHECK_C(cudaMemcpyAsync(buffers[input_node.index], input.get(), input_node.getDataSize() * sizeof(float), cudaMemcpyHostToDevice, stream));
+      CHECK_C(cudaMemcpyAsync(buffers[input_node.index], input, input_node.getDataSize() * sizeof(float), cudaMemcpyHostToDevice, stream));
       // Inference 
       context->enqueue(1, buffers, stream, nullptr);
       // Copy Output Memory
@@ -340,8 +341,9 @@ namespace DECT
       cudaStreamDestroy(stream);
       // Free Momery
       CHECK_C(cudaFree(buffers[input_node.index]));
-      for (auto node: output_nodes)
+      for (int i = 0; i < output_nodes.size(); i++)
       {
+         NodeInfo & node = output_nodes[i];
          CHECK_C(cudaFree(buffers[node.index]));
       }
 
@@ -369,10 +371,10 @@ namespace DECT
          auto score = bbox_out[index * 6 + 4];
          if (score > conf_thre)
          {
-            auto x1 = bbox_out[index * 6 + 0] / scale_ratio;
-            auto y1 = bbox_out[index * 6 + 1] / scale_ratio;
-            auto x2 = bbox_out[index * 6 + 2] / scale_ratio;
-            auto y2 = bbox_out[index * 6 + 3] / scale_ratio;
+            auto x1 = static_cast<int32_t>(bbox_out[index * 6 + 0] / scale_ratio);
+            auto y1 = static_cast<int32_t>(bbox_out[index * 6 + 1] / scale_ratio);
+            auto x2 = static_cast<int32_t>(bbox_out[index * 6 + 2] / scale_ratio);
+            auto y2 = static_cast<int32_t>(bbox_out[index * 6 + 3] / scale_ratio);
             auto w = x2 - x1; auto h = y2 - y1;
             auto class_id = static_cast<int32_t>(bbox_out[index * 6 + 5]);
             cv::Mat bit_mask = cv::Mat::zeros(mask_out_h, mask_out_w, CV_8UC1);
@@ -405,10 +407,10 @@ namespace DECT
       size = file.tellg();
       file.seekg(0, file.beg);
       trtModelStream = new char[size];
-      CHECK_F(trtModelStream != nullptr, "trtModelStream data buffer is created fail");
+      CHECK_F(trtModelStream != nullptr, "TRTModelStream data buffer is created fail");
       file.read(trtModelStream, size);
       file.close();
-      CHECK_F((bool)initLibNvInferPlugins(&TLogger, ""), "Init NvInfer Plugin");
+      CHECK_F((bool)initLibNvInferPlugins(&TLogger, ""), "Init NvInfer Plugin fail");
       IRuntime * runtime = createInferRuntime(TLogger);
       CHECK_F(runtime != nullptr, "runtime");
       engine = runtime->deserializeCudaEngine(trtModelStream, size);
@@ -418,11 +420,16 @@ namespace DECT
       input_node.index = engine->getBindingIndex(input_node.name.c_str());
       auto out_dims = engine->getBindingDimensions(input_node.index);
       input_node.dim = out_dims;
-      for (std::vector<NodeInfo>::iterator node = output_nodes.begin(); node != output_nodes.end(); node++)
+      // for (int i = 0; i < output_nodes.size(); i++)
+      // {
+      //    NodeInfo & node = output_nodes[i];
+      //    auto out_dims = engine->getBindingDimensions(node.index);
+      //    node.dim = out_dims;
+      // }
+      for (std::vector<NodeInfo>::iterator node_ptr=output_nodes.begin(); node_ptr != output_nodes.end(); node_ptr++)
       {
-         node->index = engine->getBindingIndex((node->name).c_str());
-         auto out_dims = engine->getBindingDimensions(node->index);
-         node->dim = out_dims;
+         node_ptr->index = engine->getBindingIndex((node_ptr->name).c_str());
+         node_ptr->dim = engine->getBindingDimensions(node_ptr->index);
       }
       delete [] trtModelStream;
    }

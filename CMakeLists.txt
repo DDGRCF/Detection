@@ -65,8 +65,8 @@ endif (USE_LIBTORCH)
 # include and link TensorRT 
 if (USE_TENSORRT)
     add_definitions(-DUSE_TENSORRT)
-    include_directories(/home/r/TensorRT/cuda-10.2/TensorRT-8.4.0.6/include)
-    link_directories(/home/r/TensorRT/cuda-10.2/TensorRT-8.4.0.6/lib)
+    include_directories(/home/r/TensorRT/cuda-10.2/TensorRT-8.2.4.2/include)
+    link_directories(/home/r/TensorRT/cuda-10.2/TensorRT-8.2.4.2/lib)
     set(EXTRA_LIBS ${EXTRA_LIBS} nvinfer nvinfer_plugin)
 endif (USE_TENSORRT)
 
@@ -89,5 +89,5 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 target_link_libraries(${CMAKE_PROJECT_NAME} dl)
 target_link_libraries(${CMAKE_PROJECT_NAME} ${EXTRA_LIBS})
 
-# add_definitions(-O0 -pthread)
-add_definitions(-O2 -pthread)
+add_definitions(-O0 -pthread)
+# add_definitions(-O2 -pthread)
